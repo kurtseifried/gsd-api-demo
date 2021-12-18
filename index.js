@@ -1,7 +1,33 @@
 import { Router } from 'itty-router'
 
+const host = 'https://raw.githubusercontent.com/cloudsecurityalliance/gsd-database/main'
+
 // Create a new router
 const router = Router()
+
+/**
+ * From the Fetch JSON example
+ *
+ * gatherResponse awaits and returns a response body as a string.
+ * Use await gatherResponse(..) in an async function to get the response body
+ * @param {Response} response
+ */
+async function gatherResponse(response) {
+  const { headers } = response
+  const contentType = headers.get("content-type") || ""
+  if (contentType.includes("application/json")) {
+    return JSON.stringify(await response.json())
+  }
+  else if (contentType.includes("application/text")) {
+    return response.text()
+  }
+  else if (contentType.includes("text/html")) {
+    return response.text()
+  }
+  else {
+    return response.text()
+  }
+}
 
 /*
 Our index route, a simple hello world.
@@ -16,22 +42,35 @@ URL.
 
 Try visit /example/hello and see the response.
 */
-router.get("/example/:text", ({ params }) => {
-  // Decode text like "Hello%20world" into "Hello world"
-  let input = decodeURIComponent(params.text)
+router.get("/:id", async ({ params }) => {
+  const identifier = decodeURIComponent(params.id)
 
-  // Construct a buffer from our input
-  let buffer = Buffer.from(input, "utf8")
+  if (!identifier.match(/^GSD-\d{4}-\d{7,}$/)) {
+    // TODO: Support other ID formats. Also support stripping `.json` if included
+    return new Response(
+      'Invalid GSD format! Expected something like GSD-2021-1002352.',
+      { status: 400 }
+    )
+  }
 
-  // Serialise the buffer into a base64 string
-  let base64 = buffer.toString("base64")
+  // Split navigation data from identifier
+  const year = identifier.split('-')[1]
+  const thousands = `${identifier.split('-')[2].slice(0, -3)}xxx`
 
-  // Return the HTML with the string to the client
-  return new Response(`<p>Base64 encoding: <code>${base64}</code></p>`, {
+  // Resolve full url
+  const path = `${year}/${thousands}/${identifier}.json`
+  const url = `${host}/${path}`
+
+  // From the Fetch JSON example
+  const init = {
     headers: {
-      "Content-Type": "text/html"
-    }
-  })
+      "content-type": "application/json;charset=UTF-8",
+    },
+  }
+
+  const response = await fetch(url, init)
+  const results = await gatherResponse(response)
+  return new Response(results, init)
 })
 
 /*
