@@ -45,7 +45,7 @@ Try visit /example/hello and see the response.
 router.get("/:id", async ({ params }) => {
   const identifier = decodeURIComponent(params.id)
 
-  if (!identifier.match(/^GSD-\d{4}-\d{7,}$/)) {
+  if (!(identifier.match(/^GSD-\d{4}-\d{7,}$/) || identifier.match(/^UVI-\d{4}-\d{7,}$/))) {
     // TODO: Support other ID formats. Also support stripping `.json` if included
     return new Response(
       'Invalid GSD format! Expected something like GSD-2021-1002352.',
